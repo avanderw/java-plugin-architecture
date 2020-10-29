@@ -1,21 +1,28 @@
 package net.avdw.plugin.main;
 
-import java.io.File;
-import java.net.MalformedURLException;
+import java.io.IOException;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Properties;
 
 public class Main {
-    public static void main(String[] args) throws MalformedURLException, ClassNotFoundException {
-        try {
-            System.out.println(Class.forName("net.avdw.plugin.plugin.Plugin"));
-        } catch (ClassNotFoundException e) {
-            System.out.println("Not found");
-        }
+    public static void main(String[] args) throws IOException {
+        Path pluginDirectory = Paths.get("plugin/target");
+        Files.newDirectoryStream(pluginDirectory, "*.jar").forEach(path -> {
+            try {
+                System.out.printf("Creating classloader for jar%n");
+                URLClassLoader localLoader = new URLClassLoader(new URL[]{path.toUri().toURL()}, Main.class.getClassLoader());
+                Properties properties = new Properties();
+                properties.load(localLoader.getResourceAsStream("META-INF/plugin.properties"));
+                System.out.println(properties);
+                System.out.println(Class.forName(properties.getProperty("class"), false, localLoader));
+            } catch (ClassNotFoundException | IOException e) {
+                e.printStackTrace();
+            }
+        });
 
-        URLClassLoader localLoader = new URLClassLoader(new URL[]{new File("plugin/target/plugin-0.0-SNAPSHOT.jar").toURI().toURL()}, Main.class.getClassLoader());
-
-        Class.forName("net.avdw.plugin.plugin.Plugin", false, localLoader);
-        System.out.println("Found");
     }
 }
